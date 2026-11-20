@@ -48,6 +48,8 @@ type base struct {
 	env *adapter.InboundEnv
 	typ string
 
+	wrapLn func(net.Listener) net.Listener
+
 	mu     sync.Mutex
 	ln     net.Listener
 	closed bool
@@ -62,6 +64,9 @@ func (b *base) serve(handle func(conn net.Conn)) error {
 	ln, err := b.env.ListenTCP()
 	if err != nil {
 		return err
+	}
+	if b.wrapLn != nil {
+		ln = b.wrapLn(ln)
 	}
 	b.mu.Lock()
 	b.ln = ln
