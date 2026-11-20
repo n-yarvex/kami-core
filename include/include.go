@@ -8,4 +8,6 @@ import (
 	_ "github.com/n-yarvex/kami-core/proto/masque"
 	_ "github.com/n-yarvex/kami-core/proto/nakis"
 	_ "github.com/n-yarvex/kami-core/proto/ss2022"
+	_ "github.com/n-yarvex/kami-core/proto/vless"
+	_ "github.com/n-yarvex/kami-core/proto/wireguard"
 )
