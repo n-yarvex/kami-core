@@ -2,6 +2,7 @@ package inbound
 
 import (
 	"bufio"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -16,6 +17,7 @@ import (
 	"github.com/n-yarvex/kami-core/adapter"
 	"github.com/n-yarvex/kami-core/addr"
 	"github.com/n-yarvex/kami-core/outbound"
+	"github.com/n-yarvex/kami-core/tlsx"
 )
 
 func init() {
@@ -31,7 +33,8 @@ type httpInbound struct {
 
 func newHTTP(env *adapter.InboundEnv, raw json.RawMessage) (*httpInbound, error) {
 	var o struct {
-		Users []User `json:"users"`
+		Users []User       `json:"users"`
+		TLS   *tlsx.Server `json:"tls"`
 	}
 	if err := adapter.Decode(raw, &o); err != nil {
 		return nil, fmt.Errorf("http: %w", err)
@@ -40,7 +43,18 @@ func newHTTP(env *adapter.InboundEnv, raw json.RawMessage) (*httpInbound, error)
 	if err != nil {
 		return nil, fmt.Errorf("http: %w", err)
 	}
-	return &httpInbound{base: base{env: env, typ: "http"}, users: u}, nil
+	in := &httpInbound{base: base{env: env, typ: "http"}, users: u}
+	if o.TLS != nil {
+		cfg, err := o.TLS.Config()
+		if err != nil {
+			return nil, fmt.Errorf("http: %w", err)
+		}
+		if len(cfg.NextProtos) == 0 {
+			cfg.NextProtos = []string{"http/1.1"}
+		}
+		in.wrapLn = func(ln net.Listener) net.Listener { return tls.NewListener(ln, cfg) }
+	}
+	return in, nil
 }
 
 func (h *httpInbound) Start() error {
